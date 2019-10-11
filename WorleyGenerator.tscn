@@ -9,31 +9,28 @@ viewport_path = NodePath("Viewport")
 [node name="WorleyGenerator" type="Node"]
 script = ExtResource( 1 )
 preview = true
-preview_channels = 7
 channel_r = {
 "enable": true,
 "num_cells_per_axis": 10
 }
 channel_g = {
 "enable": true,
-"num_cells_per_axis": 10
+"num_cells_per_axis": 15
 }
 channel_b = {
 "enable": true,
-"num_cells_per_axis": 10
+"num_cells_per_axis": 5
 }
-slice = 511
-texture_resolution = 512
-regenerate = false
+texture_resolution = 100
 
 [node name="Viewport" type="Viewport" parent="."]
-size = Vector2( 512, 512 )
+size = Vector2( 100, 100 )
 render_target_update_mode = 1
 
 [node name="Canvas" type="ColorRect" parent="Viewport"]
 material = ExtResource( 2 )
-margin_right = 512.0
-margin_bottom = 512.0
+margin_right = 100.0
+margin_bottom = 100.0
 
 [node name="Preview" type="Sprite" parent="."]
 texture = SubResource( 1 )

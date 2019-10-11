@@ -6,13 +6,22 @@ uniform sampler2D pointsB;
 uniform int numCellsR;
 uniform int numCellsG;
 uniform int numCellsB;
+uniform bool enableChannelR;
+uniform bool enableChannelG;
+uniform bool enableChannelB;
 uniform int numSlices;
 uniform int slice;
 
 void fragment()
 {	
+	COLOR = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
 	for (int channel = 0; channel < 3; channel++)
 	{
+		if (channel == 0 && !enableChannelR) continue;
+		if (channel == 1 && !enableChannelG) continue;
+		if (channel == 2 && !enableChannelB) continue;
+		
 		int numCellsPerAxis;
 		if (channel == 0) numCellsPerAxis = numCellsR;
 		else if (channel == 1) numCellsPerAxis = numCellsG;

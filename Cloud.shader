@@ -18,6 +18,7 @@ uniform float darknessThreshold : hint_range(0.0, 1.0);
 uniform float densityMultiplier : hint_range(0.1, 10.0);
 uniform float densityOffset : hint_range(-1.0, 1.0);
 uniform float phaseVal : hint_range(0.1, 10.0);
+uniform vec3 noiseWeights = vec3(1.0f, 1.0f, 1.0f);
 
 /* World information. */
 uniform vec3 sunDirection; // Direction of the sun in world coordinates.
@@ -35,8 +36,9 @@ void vertex()
 /* Density sampler. */
 float sampleDensity(vec3 position)
 {
-	float density = 1.0 - texture(volume, mod(position.xyz / cloudScale + windDirection*offset, 1.0)).r;
-	return max(0, densityMultiplier*density + densityOffset);
+	vec3 normalizedNoiseWeights = noiseWeights / length(noiseWeights);
+	float density = dot(1.0 - texture(volume, mod(position.xyz / cloudScale + windDirection*offset, 1.0)).rgb, normalizedNoiseWeights);
+	return max(0, densityMultiplier*(density + densityOffset));
 }
 
 /* Box intersector. */

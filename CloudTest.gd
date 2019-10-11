@@ -1,14 +1,14 @@
 tool
 extends Spatial
 
-onready var noise_generator = get_node("NoiseGenerator")
+onready var noise_generator = get_node("WorleyGenerator")
 onready var shader_material = get_node("ShaderQuad").get_surface_material(0)
 
 func _ready():
 	noise_generator.texture_resolution = 64
 	yield(get_tree().create_timer(0.5), "timeout")
-	yield(noise_generator.get_volume_tex(), "completed")
-	var noise_tex = noise_generator.volume_tex
+	yield(noise_generator.generate_volume_texture(), "completed")
+	var noise_tex = noise_generator.volume_texture
 	shader_material.set_shader_param("volume", noise_tex)
 
 func _process(delta):
