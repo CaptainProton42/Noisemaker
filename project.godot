@@ -16,7 +16,6 @@ _global_script_class_icons={
 [application]
 
 config/name="Clouds"
-run/main_scene="res://NoiseTest.tscn"
 config/icon="res://icon.png"
 
 [rendering]

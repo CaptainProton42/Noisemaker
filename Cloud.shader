@@ -14,6 +14,10 @@ uniform int numSteps : hint_range(1, 50);
 uniform int numStepsLight : hint_range(1, 50);
 uniform float lightAbsorptionTowardsSun : hint_range(0.0, 10.0);
 uniform float cloudAbsorption : hint_range(0.0, 10.0);
+uniform float darknessThreshold : hint_range(0.0, 1.0);
+uniform float densityMultiplier : hint_range(0.1, 10.0);
+uniform float densityOffset : hint_range(-1.0, 1.0);
+uniform float phaseVal : hint_range(0.1, 10.0);
 
 /* World information. */
 uniform vec3 sunDirection; // Direction of the sun in world coordinates.
@@ -32,7 +36,7 @@ void vertex()
 float sampleDensity(vec3 position)
 {
 	float density = 1.0 - texture(volume, mod(position.xyz / cloudScale + windDirection*offset, 1.0)).r;
-	return density;
+	return max(0, densityMultiplier*density + densityOffset);
 }
 
 /* Box intersector. */
@@ -66,7 +70,7 @@ float lightmarch(vec3 position)
 		totalDensity += max(0, sampleDensity(position) * stepSize);
 	}
 	float transmittance = exp(-totalDensity * lightAbsorptionTowardsSun);
-	return transmittance;
+	return darknessThreshold + transmittance * (1.0 - darknessThreshold);
 }
 
 // Raymarching shader.
@@ -102,7 +106,7 @@ void fragment()
 		if (density > 0.0f)
 		{
 			float lightTransmittance = lightmarch(rayPos);
-			lightEnergy += density * stepSize * transmittance * lightTransmittance;
+			lightEnergy += density * stepSize * transmittance * lightTransmittance * phaseVal;
 			transmittance *= exp(-density * stepSize * cloudAbsorption);
 			
 			if (transmittance < 0.01) break;
