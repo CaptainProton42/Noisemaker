@@ -11,7 +11,7 @@ script = ExtResource( 1 )
 preview = true
 channel_r = {
 "enable": true,
-"num_cells_per_axis": 10
+"num_cells_per_axis": 50
 }
 channel_g = {
 "enable": true,
@@ -21,6 +21,7 @@ channel_b = {
 "enable": true,
 "num_cells_per_axis": 5
 }
+slice = 90
 texture_resolution = 100
 
 [node name="Viewport" type="Viewport" parent="."]

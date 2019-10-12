@@ -1,8 +1,8 @@
 shader_type canvas_item;
 
-uniform sampler2D pointsR;
-uniform sampler2D pointsG;
-uniform sampler2D pointsB;
+uniform sampler3D pointsR;
+uniform sampler3D pointsG;
+uniform sampler3D pointsB;
 uniform int numCellsR;
 uniform int numCellsG;
 uniform int numCellsB;
@@ -49,9 +49,10 @@ void fragment()
 					
 					int cellIndex = adjCell.x + numCellsPerAxis * (adjCell.y  + numCellsPerAxis * adjCell.z);
 					vec3 pointPosition;
-					if (channel == 0) pointPosition = texelFetch(pointsR, ivec2(cellIndex, 0), 0).xyz;
-					if (channel == 1) pointPosition = texelFetch(pointsG, ivec2(cellIndex, 0), 0).xyz;
-					if (channel == 2) pointPosition = texelFetch(pointsB, ivec2(cellIndex, 0), 0).xyz;
+
+					if (channel == 0) pointPosition = texelFetch(pointsR, ivec3(adjCell.x, adjCell.y, adjCell.z), 0).xyz;
+					if (channel == 1) pointPosition = texelFetch(pointsG, ivec3(adjCell.x, adjCell.y, adjCell.z), 0).xyz;
+					if (channel == 2) pointPosition = texelFetch(pointsB, ivec3(adjCell.x, adjCell.y, adjCell.z), 0).xyz;
 					
 					vec3 cellPosition = vec3(ivec3(curCell) + ivec3(x_offset, y_offset, z_offset));
 					vec3 sampleOffset = samplePosition - (pointPosition + cellPosition);

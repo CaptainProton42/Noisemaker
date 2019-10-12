@@ -55,9 +55,9 @@ func generate():
 	points_r = generate_points(channel_r.num_cells_per_axis)
 	points_g = generate_points(channel_g.num_cells_per_axis)
 	points_b = generate_points(channel_b.num_cells_per_axis)
-	generate_sampler(CHANNEL_RED, points_r)
-	generate_sampler(CHANNEL_GREEN, points_g)
-	generate_sampler(CHANNEL_BLUE, points_b)
+	generate_sampler(CHANNEL_RED, points_r, channel_r.num_cells_per_axis)
+	generate_sampler(CHANNEL_GREEN, points_g, channel_g.num_cells_per_axis)
+	generate_sampler(CHANNEL_BLUE, points_b, channel_b.num_cells_per_axis)
 	set_shader_params()
 
 	viewport.render_target_update_mode = viewport.UPDATE_ONCE
@@ -106,14 +106,19 @@ func set_shader_params():
 	canvas.get_material().set_shader_param("numSlices", texture_resolution)
 	canvas.get_material().set_shader_param("slice", slice)
 
-func generate_sampler(channel, points):
-	var image = Image.new()
-	var texture = ImageTexture.new()
-	image.create(points.size(), 1, false, Image.FORMAT_RGBF)
-	image.lock()
-	for index in range(points.size()):
-		image.set_pixel(index, 0, Color(points[index].x, points[index].y, points[index].z, 0.0))
-	texture.create_from_image(image)
+func generate_sampler(channel, points, num_cells_per_axis):
+	var texture = Texture3D.new()
+	texture.create(num_cells_per_axis, num_cells_per_axis, num_cells_per_axis, Image.FORMAT_RGBF)
+	for z in range(num_cells_per_axis):
+		var image = Image.new()
+		image.create(num_cells_per_axis, num_cells_per_axis, false, Image.FORMAT_RGBF)
+		image.lock()
+		for x in range(num_cells_per_axis):
+			for y in range(num_cells_per_axis):
+				var index = x + num_cells_per_axis * (y + num_cells_per_axis * z)
+				image.set_pixel(x, y, Color(points[index].x, points[index].y, points[index].z, 0.0))
+		image.unlock()
+		texture.set_layer_data(image, z)
 	
 	if channel == CHANNEL_RED:
 		canvas.get_material().set_shader_param("pointsR", texture)

@@ -8,9 +8,9 @@ uniform vec3 bMax;
 
 /* Cloud parameters. */
 uniform vec3 windDirection = vec3(1.0f, 0.0f, 0.0f);
-uniform float offset : hint_range(0.0, 1.0f);
+uniform float offset : hint_range(0.0f, 1.0f);
 uniform float cloudScale : hint_range(0.1, 100.0);
-uniform int numSteps : hint_range(1, 50);
+uniform int numSteps : hint_range(1, 100);
 uniform int numStepsLight : hint_range(1, 50);
 uniform float lightAbsorptionTowardsSun : hint_range(0.0, 10.0);
 uniform float cloudAbsorption : hint_range(0.0, 10.0);
@@ -19,6 +19,7 @@ uniform float densityMultiplier : hint_range(0.1, 10.0);
 uniform float densityOffset : hint_range(-1.0, 1.0);
 uniform float phaseVal : hint_range(0.1, 10.0);
 uniform vec3 noiseWeights = vec3(1.0f, 1.0f, 1.0f);
+uniform float gradientThreshold : hint_range(0.0f, 1.0f);
 
 /* World information. */
 uniform vec3 sunDirection; // Direction of the sun in world coordinates.
@@ -36,8 +37,13 @@ void vertex()
 /* Density sampler. */
 float sampleDensity(vec3 position)
 {
+	vec3 size = bMax - bMin;
+	float heightPercent = (position.y - bMin.y) / size.y;
+	float heightGradient;
+	if (gradientThreshold > 0.95) heightGradient = 1.0f;
+	else heightGradient = 1.0 - clamp((heightPercent - gradientThreshold) / (1.0 - gradientThreshold), 0.0f, 1.0f);
 	vec3 normalizedNoiseWeights = noiseWeights / length(noiseWeights);
-	float density = dot(1.0 - texture(volume, mod(position.xyz / cloudScale + windDirection*offset, 1.0)).rgb, normalizedNoiseWeights);
+	float density = dot(1.0 - texture(volume, mod(position.xyz / cloudScale + windDirection*offset, 1.0)).rgb, normalizedNoiseWeights) * heightGradient;
 	return max(0, densityMultiplier*(density + densityOffset));
 }
 
@@ -100,7 +106,7 @@ void fragment()
 	even for low step numbers while keeping computational complexity
 	consistent. */
 	float stepSize = maxDst / float(numSteps);
-
+	
 	while (dstTravelled < maxDst)
 	{
 		vec3 rayPos = rayOrigin + rayDir * (dstToBox + dstTravelled);
