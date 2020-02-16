@@ -20,13 +20,20 @@ uniform float densityOffset : hint_range(-1.0, 1.0);
 uniform float phaseVal : hint_range(0.1, 10.0);
 uniform vec3 noiseWeights = vec3(1.0f, 1.0f, 1.0f);
 uniform float gradientThreshold : hint_range(0.0f, 1.0f);
+uniform bool enableDetail = true;
+uniform float detailScale : hint_range(0.1f, 10.0f);
+uniform vec3 detailWindDirection = vec3(1.0f, 0.0f, 0.0f);
+uniform float detailMultiplier : hint_range(0.0f, 1.0f);
+uniform float detailOffset : hint_range(0.0f, 1.0f);
+uniform vec3 detailWeights;
 
 /* World information. */
 uniform vec3 sunDirection; // Direction of the sun in world coordinates.
 uniform vec4 sunColor : hint_color; // Color of the sun.
 
-/* Noise sampler. (Currently broken.) */
+/* Noise samplers. */
 uniform sampler3D volume;
+uniform sampler3D detail;
 
 /* Set the quad to always be in front of the camera. */
 void vertex()
@@ -40,11 +47,27 @@ float sampleDensity(vec3 position)
 	vec3 size = bMax - bMin;
 	float heightPercent = (position.y - bMin.y) / size.y;
 	float heightGradient;
-	if (gradientThreshold > 0.95) heightGradient = 1.0f;
-	else heightGradient = 1.0 - clamp((heightPercent - gradientThreshold) / (1.0 - gradientThreshold), 0.0f, 1.0f);
+	if (gradientThreshold > 0.95f) heightGradient = 1.0f;
+	else heightGradient = 1.0f - clamp((heightPercent - gradientThreshold) / (1.0f - gradientThreshold), 0.0f, 1.0f);
 	vec3 normalizedNoiseWeights = noiseWeights / length(noiseWeights);
-	float density = dot(1.0 - texture(volume, mod(position.xyz / cloudScale + windDirection*offset, 1.0)).rgb, normalizedNoiseWeights) * heightGradient;
-	return max(0, densityMultiplier*(density + densityOffset));
+	vec3 samplePosition = mod(position.xyz / cloudScale + windDirection*offset, 1.0f);
+	float shapeFBM = dot(1.0f - texture(volume, samplePosition).rgb, normalizedNoiseWeights) * heightGradient + densityOffset;
+	float baseShapeDensity = max(0, shapeFBM);
+	
+	//return baseShapeDensity * densityMultiplier;
+	
+	if (enableDetail && baseShapeDensity > 0.0f)
+	{
+		vec3 detailSamplePos =  mod(position.xyz / detailScale + detailWindDirection*detailOffset, 1.0f);
+		vec3 detailNoise = 1.0f - texture(detail, detailSamplePos).rgb;
+		vec3 normalizedDetailWeights = detailWeights / length(detailWeights);
+		float detailFBM = dot(detailNoise, normalizedDetailWeights);
+		float detailErodeWeight = (1.0f - shapeFBM) * (1.0f - shapeFBM) * (1.0f - shapeFBM);
+		float cloudDensity = baseShapeDensity - (1.0f - detailFBM) * detailErodeWeight * detailMultiplier;
+		return cloudDensity * densityMultiplier;
+	}
+	
+	return baseShapeDensity * densityMultiplier;
 }
 
 /* Box intersector. */

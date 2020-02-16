@@ -1,26 +1,29 @@
 tool
 extends Spatial
 
-onready var noise_generator = get_node("WorleyGenerator")
 onready var shader_material = get_node("ShaderQuad").get_surface_material(0)
 
 export var cloud_speed = 0.1
+export var detail_speed = 0.01
 export var regenerate = false setget set_regenerate
 
 var offset = 0.0
+var detail_offset = 0.0
 
 func _ready():
-	noise_generator.generate()
 	regenerate()
 
 func set_regenerate(val):
-	regenerate()
+	if (is_inside_tree()):
+		regenerate()
 
 func regenerate():
-	yield(get_tree().create_timer(0.5), "timeout")
-	yield(noise_generator.generate_volume_texture(), "completed")
-	var noise_tex = noise_generator.volume_texture
-	shader_material.set_shader_param("volume", noise_tex)
+	get_node("WorleyGenerator").generate()
+	yield(get_node("WorleyGenerator").generate_volume_texture(), "completed")
+	shader_material.set_shader_param("volume", get_node("WorleyGenerator").volume_texture)
+	get_node("DetailGenerator").generate()
+	yield(get_node("DetailGenerator").generate_volume_texture(), "completed")
+	shader_material.set_shader_param("detail", get_node("DetailGenerator").volume_texture)
 
 func _process(delta):
 	var bMin = translation - scale / 2.0
@@ -40,4 +43,6 @@ func _process(delta):
 	shader_material.set_shader_param("sunColor", sun_color)
 
 	offset += cloud_speed*delta
+	detail_offset += (cloud_speed + detail_speed)*delta
 	shader_material.set_shader_param("offset", offset)
+	shader_material.set_shader_param("detailOffset", detail_offset)

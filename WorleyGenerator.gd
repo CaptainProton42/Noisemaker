@@ -1,5 +1,5 @@
 tool
-extends Node
+extends Node2D
 
 const CHANNEL_RED = 1
 const CHANNEL_GREEN = 2
@@ -17,7 +17,7 @@ export var channel_g = channel
 export var channel_b = channel
 
 export var slice : int = 0 setget set_slice
-export var texture_resolution : int = 512 setget set_resolution
+export var texture_resolution : int = 512 setget set_texture_resolution
 
 # Regenerate button.
 export var regenerate : bool = false setget set_regenerate
@@ -26,13 +26,17 @@ onready var viewport = get_node("Viewport")
 onready var canvas = get_node("Viewport/Canvas")
 onready var preview_sprite = get_node("Preview")
 
-var volume_texture
+var volume_texture : Texture3D
 
 func set_regenerate(value):
+	if not is_inside_tree():
+		yield(self, "ready")
 	if value:
 		generate()
 
 func set_preview_channels(flags):
+	if not is_inside_tree():
+		yield(self, "ready")
 	preview_channels = flags
 	preview_sprite.self_modulate = Color(0.0, 0.0, 0.0)
 	if (flags) & 1:
@@ -43,15 +47,19 @@ func set_preview_channels(flags):
 		preview_sprite.self_modulate.b = 1.0
 
 func set_preview(value):
+	if not is_inside_tree():
+		yield(self, "ready")
 	preview_sprite.visible = value
 
-func get_preview():
+func get_preview() -> bool:
+	if not is_inside_tree():
+		yield(self, "ready")
 	return preview_sprite.visible
 
 func generate():
-	var points_r
-	var points_g
-	var points_b
+	var points_r : PoolVector3Array
+	var points_g : PoolVector3Array
+	var points_b : PoolVector3Array
 	points_r = generate_points(channel_r.num_cells_per_axis)
 	points_g = generate_points(channel_g.num_cells_per_axis)
 	points_b = generate_points(channel_b.num_cells_per_axis)
@@ -61,8 +69,11 @@ func generate():
 	set_shader_params()
 
 	viewport.render_target_update_mode = viewport.UPDATE_ONCE
+	refresh_viewport()
 
-func set_slice(new_slice):
+func set_slice(new_slice : int):
+	if not is_inside_tree():
+		yield(self, "ready")
 	if new_slice >= texture_resolution:
 		new_slice = 0
 	elif new_slice <= 0:
@@ -71,23 +82,26 @@ func set_slice(new_slice):
 	if is_inside_tree():
 		canvas.get_material().set_shader_param("slice", slice)
 
-func set_resolution(resolution):
+	viewport.render_target_update_mode = viewport.UPDATE_ONCE
+
+func set_texture_resolution(resolution : int):
+	if not is_inside_tree():
+		yield(self, "ready")
 	texture_resolution = resolution
-	set_slice(slice)
-	viewport.size.x = resolution
-	viewport.size.y = resolution
-	canvas.rect_size.x = resolution
-	canvas.rect_size.y = resolution
+	set_slice(slice) # Reset slice in case it's out of bounds
 	generate()
-	preview_sprite.update()
+
+func refresh_viewport():
+	viewport.size.x = texture_resolution
+	viewport.size.y = texture_resolution
+	canvas.rect_size.x = texture_resolution
+	canvas.rect_size.y = texture_resolution
+	preview_sprite.update() # Force-draw resize
 
 # Returns offset of each point in normalized cell coordinates.
 func generate_points(num_cells_per_axis) -> PoolVector3Array:
 	var points : PoolVector3Array = PoolVector3Array()
 	points.resize(num_cells_per_axis * num_cells_per_axis * num_cells_per_axis)
-	var x : int
-	var y : int
-	var z : int
 	for x in range(num_cells_per_axis):
 		for y in range(num_cells_per_axis):
 			for z in range(num_cells_per_axis):
@@ -96,6 +110,7 @@ func generate_points(num_cells_per_axis) -> PoolVector3Array:
 				points[index] = random_offset
 	return points
 
+# Sets the shader parameters from the Node properties
 func set_shader_params():
 	canvas.get_material().set_shader_param("enableChannelR", channel_r.enable)
 	canvas.get_material().set_shader_param("enableChannelG", channel_g.enable)
@@ -106,6 +121,8 @@ func set_shader_params():
 	canvas.get_material().set_shader_param("numSlices", texture_resolution)
 	canvas.get_material().set_shader_param("slice", slice)
 
+# Creates a sampler texture containing the point coordinates withing each cell for each layer and assigns the texture
+# to the shader of the corresponding color channeö.
 func generate_sampler(channel, points, num_cells_per_axis):
 	var texture = Texture3D.new()
 	texture.create(num_cells_per_axis, num_cells_per_axis, num_cells_per_axis, Image.FORMAT_RGBF)
@@ -120,13 +137,15 @@ func generate_sampler(channel, points, num_cells_per_axis):
 		image.unlock()
 		texture.set_layer_data(image, z)
 	
-	if channel == CHANNEL_RED:
-		canvas.get_material().set_shader_param("pointsR", texture)
-	elif channel == CHANNEL_GREEN:
-		canvas.get_material().set_shader_param("pointsG", texture)
-	elif channel == CHANNEL_BLUE:
-		canvas.get_material().set_shader_param("pointsB", texture)
+	match channel:
+		CHANNEL_RED:
+			canvas.get_material().set_shader_param("pointsR", texture)
+		CHANNEL_GREEN:
+			canvas.get_material().set_shader_param("pointsG", texture)
+		CHANNEL_BLUE:
+			canvas.get_material().set_shader_param("pointsB", texture)
 
+# Generates a volume texture (Texture3D) and assigns it to the volume_texture property of the Node
 func generate_volume_texture():
 	var tex = Texture3D.new()
 	tex.create(texture_resolution, texture_resolution, texture_resolution, viewport.get_texture().get_data().get_format())
@@ -134,6 +153,8 @@ func generate_volume_texture():
 		canvas.get_material().set_shader_param("slice", layer)
 		viewport.render_target_update_mode = viewport.UPDATE_ONCE
 		yield(get_tree(), "idle_frame") # We need to wait for the viewport to update. Major bottleneck.
+		# IDEA: Instead of multiple viewports just one viewport with all layers? Or *maybe* just multiple viewports
+		# However, this would require a change of the shader
 		var img = viewport.get_texture().get_data()
 		tex.set_layer_data(img, layer)
 	volume_texture = tex
