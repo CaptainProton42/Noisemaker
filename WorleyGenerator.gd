@@ -28,7 +28,7 @@ onready var preview_sprite = get_node("Preview")
 
 var volume_texture : Texture3D
 
-func set_regenerate(value):
+func set_regenerate(value : bool):
 	if not is_inside_tree():
 		yield(self, "ready")
 	if value:

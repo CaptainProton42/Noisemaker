@@ -3,6 +3,12 @@ extends Spatial
 
 onready var shader_material = get_node("ShaderQuad").get_surface_material(0)
 
+export var environment : NodePath
+
+export var sun_color : Color
+export var sun_lat : float
+export var sun_long : float
+
 export var cloud_speed = 0.1
 export var detail_speed = 0.01
 export var regenerate = false setget set_regenerate
@@ -31,9 +37,10 @@ func _process(delta):
 	shader_material.set_shader_param("bMin", bMin)
 	shader_material.set_shader_param("bMax", bMax)
 
-	var sun_color = get_node("WorldEnvironment").environment.background_sky.sun_color
-	var sun_lat = get_node("WorldEnvironment").environment.background_sky.sun_latitude * PI / 180.0
-	var sun_long = get_node("WorldEnvironment").environment.background_sky.sun_longitude * PI / 180.0
+	if environment:
+		sun_color = get_node(environment).environment.background_sky.sun_color
+		sun_lat = get_node(environment).environment.background_sky.sun_latitude * PI / 180.0
+		sun_long = get_node(environment).environment.background_sky.sun_longitude * PI / 180.0
 
 	var sun_pos = Vector3()
 	sun_pos.x = cos(sun_lat) * sin(sun_long)
