@@ -1,16 +1,15 @@
 shader_type canvas_item;
 
-uniform sampler3D pointsR;
-uniform sampler3D pointsG;
-uniform sampler3D pointsB;
+uniform bool inverted;
+uniform sampler2D pointsR;
+uniform sampler2D pointsG;
+uniform sampler2D pointsB;
 uniform int numCellsR;
 uniform int numCellsG;
 uniform int numCellsB;
 uniform bool enableChannelR;
 uniform bool enableChannelG;
 uniform bool enableChannelB;
-uniform int numSlices;
-uniform int slice;
 
 void fragment()
 {	
@@ -28,9 +27,9 @@ void fragment()
 		else if (channel == 2) numCellsPerAxis = numCellsB;
 		
 		float cellSize = 1.0f / float(numCellsPerAxis);
-		int num_cells = numCellsPerAxis * numCellsPerAxis * numCellsPerAxis;
-		vec3 samplePosition = vec3(UV, float(slice) / float(numSlices)) / cellSize;
-		ivec3 curCell = ivec3(floor(samplePosition));
+		int num_cells = numCellsPerAxis * numCellsPerAxis;
+		vec2 samplePosition = vec2(UV) / cellSize;
+		ivec2 curCell = ivec2(floor(samplePosition));
 		
 		float minSqrDist = 1.0;
 		
@@ -38,30 +37,31 @@ void fragment()
 		{
 			for (int y_offset = -1; y_offset <= 1; y_offset++)
 			{
-				for (int z_offset = -1; z_offset <= 1; z_offset++)
-				{
-					ivec3 adjCell = curCell + ivec3(x_offset, y_offset, z_offset);
-					
-					// Wrap around if adjacent cell is out of bounds.
-					if (adjCell.x == -1 || adjCell.x == numCellsPerAxis) adjCell.x = (adjCell.x + numCellsPerAxis) % numCellsPerAxis;
-					if (adjCell.y == -1 || adjCell.y == numCellsPerAxis) adjCell.y = (adjCell.y + numCellsPerAxis) % numCellsPerAxis;
-					if (adjCell.z == -1 || adjCell.z == numCellsPerAxis) adjCell.z = (adjCell.z + numCellsPerAxis) % numCellsPerAxis;
-					
-					int cellIndex = adjCell.x + numCellsPerAxis * (adjCell.y  + numCellsPerAxis * adjCell.z);
-					vec3 pointPosition;
+				ivec2 adjCell = curCell + ivec2(x_offset, y_offset);
+				
+				// Wrap around if adjacent cell is out of bounds.
+				if (adjCell.x == -1 || adjCell.x == numCellsPerAxis) adjCell.x = (adjCell.x + numCellsPerAxis) % numCellsPerAxis;
+				if (adjCell.y == -1 || adjCell.y == numCellsPerAxis) adjCell.y = (adjCell.y + numCellsPerAxis) % numCellsPerAxis;
+				
+				int cellIndex = adjCell.x + numCellsPerAxis * adjCell.y;
+				vec3 pointPosition;
 
-					if (channel == 0) pointPosition = texelFetch(pointsR, ivec3(adjCell.x, adjCell.y, adjCell.z), 0).xyz;
-					if (channel == 1) pointPosition = texelFetch(pointsG, ivec3(adjCell.x, adjCell.y, adjCell.z), 0).xyz;
-					if (channel == 2) pointPosition = texelFetch(pointsB, ivec3(adjCell.x, adjCell.y, adjCell.z), 0).xyz;
-					
-					vec3 cellPosition = vec3(ivec3(curCell) + ivec3(x_offset, y_offset, z_offset));
-					vec3 sampleOffset = samplePosition - (pointPosition + cellPosition);
-					minSqrDist = min(minSqrDist, dot(sampleOffset, sampleOffset));
-				}
+				if (channel == 0) pointPosition = texelFetch(pointsR, ivec2(adjCell.x, adjCell.y), 0).xyz;
+				if (channel == 1) pointPosition = texelFetch(pointsG, ivec2(adjCell.x, adjCell.y), 0).xyz;
+				if (channel == 2) pointPosition = texelFetch(pointsB, ivec2(adjCell.x, adjCell.y), 0).xyz;
+				
+				vec3 cellPosition = vec3(ivec3(curCell, 0) + ivec3(x_offset, y_offset, 0));
+				vec3 sampleOffset = vec3(samplePosition, 0.0f) - (pointPosition + cellPosition);
+				minSqrDist = min(minSqrDist, dot(sampleOffset, sampleOffset));
 			}
 		}
 		if (channel == 0) COLOR.r = sqrt(minSqrDist);
 		else if (channel == 1) COLOR.g = sqrt(minSqrDist);
 		else if (channel == 2) COLOR.b = sqrt(minSqrDist);
+	}
+	if (inverted) {
+		if (enableChannelR) COLOR.r = 1.0 - COLOR.r;
+		if (enableChannelG) COLOR.g = 1.0 - COLOR.g;
+		if (enableChannelB) COLOR.b = 1.0 - COLOR.b;
 	}
 }

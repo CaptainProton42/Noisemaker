@@ -15,8 +15,23 @@ _global_script_class_icons={
 
 [application]
 
-config/name="Clouds"
+config/name="Noisemaker"
+run/main_scene="res://Main.tscn"
 config/icon="res://icon.png"
+
+[autoload]
+
+Settings="*res://Settings.gd"
+FileUtils="*res://FileUtils.gd"
+
+[display]
+
+window/size/width=1600
+window/size/height=900
+
+[gui]
+
+common/text_edit_undo_stack_max_size=2
 
 [rendering]
 
